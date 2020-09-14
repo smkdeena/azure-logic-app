@@ -1,0 +1,131 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "actions": {
+            "Create_Variable_to_Store": {
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "travelTime",
+                            "type": "integer",
+                            "value": "@div(body('Get_route_and_travel_time_with_traffic')?['travelDurationTraffic'],60)"
+                        }
+                    ]
+                },
+                "runAfter": {
+                    "Get_route_and_travel_time_with_traffic": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "InitializeVariable"
+            },
+            "Get_route_and_travel_time_with_traffic": {
+                "inputs": {
+                    "host": {
+                        "connection": {
+                            "name": "@parameters('$connections')['bingmaps']['connectionId']"
+                        }
+                    },
+                    "method": "get",
+                    "path": "/REST/V1/Routes/Driving",
+                    "queries": {
+                        "distanceUnit": "Kilometer",
+                        "optimize": "timeWithTraffic",
+                        "travelMode": "Driving",
+                        "wp.0": "Chennai, Tamil Nadu, India",
+                        "wp.1": "Madurai, Tamil Nadu, India"
+                    }
+                },
+                "runAfter": {},
+                "type": "ApiConnection"
+            },
+            "if_travel_time_exceeds_the_limit": {
+                "actions": {
+                    "Send_an_email_(V2)": {
+                        "inputs": {
+                            "body": {
+                                "Body": "",
+                                "Subject": "",
+                                "To": ""
+                            },
+                            "host": {
+                                "connection": {
+                                    "name": "@parameters('$connections')['undefined']['connectionId']"
+                                }
+                            },
+                            "method": "post",
+                            "path": "/v2/Mail"
+                        },
+                        "runAfter": {},
+                        "type": "ApiConnection"
+                    }
+                },
+                "expression": {
+                    "and": [
+                        {
+                            "greater": [
+                                "@variables('travelTime')",
+                                15
+                            ]
+                        }
+                    ]
+                },
+                "runAfter": {
+                    "Create_Variable_to_Store": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "If"
+            }
+        },
+        "contentVersion": "1.0.0.0",
+        "outputs": {},
+        "parameters": {
+            "$connections": {
+                "defaultValue": {},
+                "type": "Object"
+            }
+        },
+        "triggers": {
+            "Check_Travel_Time": {
+                "recurrence": {
+                    "frequency": "Week",
+                    "interval": 1,
+                    "schedule": {
+                        "hours": [
+                            "7",
+                            "8",
+                            "9",
+                            "10"
+                        ],
+                        "minutes": [
+                            0,
+                            15,
+                            30,
+                            45
+                        ],
+                        "weekDays": [
+                            "Monday",
+                            "Wednesday",
+                            "Tuesday",
+                            "Thursday",
+                            "Friday"
+                        ]
+                    }
+                },
+                "type": "recurrence"
+            }
+        }
+    },
+    "parameters": {
+        "$connections": {
+            "value": {
+                "bingmaps": {
+                    "connectionId": "/subscriptions/3f8863a6e-3a59-40e3-9d9d-13547ca02af6/resourceGroups/learn-1d84ed93-0102-486c-baa1-92e25ca39733/providers/Microsoft.Web/connections/bingmaps",
+                    "connectionName": "bingmaps",
+                    "id": "/subscriptions/3f0c3a6e-3a90-40e3-9d9d-13547ca02af6/providers/Microsoft.Web/locations/westus/managedApis/bingmaps"
+                }
+            }
+        }
+    }
+}
